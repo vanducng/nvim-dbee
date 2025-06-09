@@ -13,12 +13,12 @@ import (
 
 	"github.com/kndndrj/nvim-dbee/dbee/core"
 	"github.com/kndndrj/nvim-dbee/dbee/core/builders"
-	_ "github.com/snowflakedb/gosnowflake"
 	"github.com/snowflakedb/gosnowflake"
+	_ "github.com/snowflakedb/gosnowflake"
 )
 
 type snowflakeDriver struct {
-	c              *builders.Client
+	c                *builders.Client
 	connectionParams url.Values
 }
 
@@ -32,7 +32,7 @@ func newSnowflakeDriver(dsn string, params url.Values) (*snowflakeDriver, error)
 	if params.Get("authenticator") == "snowflake_jwt" {
 		privateKeyPath := params.Get("privateKeyPath")
 		privateKeyPass := params.Get("privateKeyPassphrase")
-		
+
 		if privateKeyPath != "" {
 			// Expand ~ to home directory
 			if strings.HasPrefix(privateKeyPath, "~") {
@@ -42,23 +42,23 @@ func newSnowflakeDriver(dsn string, params url.Values) (*snowflakeDriver, error)
 				}
 				privateKeyPath = strings.Replace(privateKeyPath, "~", home, 1)
 			}
-			
+
 			// Load private key
 			privateKey, err := loadPrivateKey(privateKeyPath, privateKeyPass)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load private key: %w", err)
 			}
-			
+
 			// Parse DSN to get config
 			cfg, err := gosnowflake.ParseDSN(dsn)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse DSN: %w", err)
 			}
-			
+
 			// Set private key in config
 			cfg.PrivateKey = privateKey
 			cfg.Authenticator = gosnowflake.AuthTypeJwt
-			
+
 			// Create DSN from config
 			dsn, err = gosnowflake.DSN(cfg)
 			if err != nil {
@@ -66,7 +66,7 @@ func newSnowflakeDriver(dsn string, params url.Values) (*snowflakeDriver, error)
 			}
 		}
 	}
-	
+
 	// Open connection
 	db, err := sql.Open("snowflake", dsn)
 	if err != nil {
@@ -76,13 +76,28 @@ func newSnowflakeDriver(dsn string, params url.Values) (*snowflakeDriver, error)
 	// Test connection
 	if err := db.Ping(); err != nil {
 		db.Close()
+
+		// Check for specific Snowflake errors and provide helpful messages
+		if snowflakeError, ok := err.(*gosnowflake.SnowflakeError); ok {
+			switch snowflakeError.Number {
+			case 390422:
+				return nil, fmt.Errorf("network policy restriction - IP address not allowed to access Snowflake. Contact your account administrator to add your IP to the allowed list. Original error: %w", err)
+			case 390100:
+				return nil, fmt.Errorf("invalid username or password. Please check your credentials. Original error: %w", err)
+			case 390114:
+				return nil, fmt.Errorf("invalid account identifier. Please check your account name format. Original error: %w", err)
+			case 390144:
+				return nil, fmt.Errorf("database/schema does not exist or no privileges. Original error: %w", err)
+			}
+		}
+
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	client := builders.NewClient(db)
 
 	return &snowflakeDriver{
-		c:              client,
+		c:                client,
 		connectionParams: params,
 	}, nil
 }
@@ -100,14 +115,14 @@ func loadPrivateKey(path, passphrase string) (*rsa.PrivateKey, error) {
 	}
 
 	var privateKey *rsa.PrivateKey
-	
+
 	if x509.IsEncryptedPEMBlock(block) {
 		// Decrypt the key if it's encrypted
 		decryptedBytes, err := x509.DecryptPEMBlock(block, []byte(passphrase))
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt private key: %w", err)
 		}
-		
+
 		parsedKey, err := x509.ParsePKCS1PrivateKey(decryptedBytes)
 		if err != nil {
 			// Try PKCS8 format
@@ -152,7 +167,7 @@ func (d *snowflakeDriver) Query(ctx context.Context, query string) (core.ResultS
 func (d *snowflakeDriver) Structure() ([]*core.Structure, error) {
 	// Use SHOW OBJECTS to avoid waking warehouse
 	query := `SHOW TERSE OBJECTS`
-	
+
 	result, err := d.c.Query(context.Background(), query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute structure query: %w", err)
@@ -200,7 +215,7 @@ func (d *snowflakeDriver) Columns(opts *core.TableOptions) ([]*core.Column, erro
 
 	// Use DESC TABLE to avoid waking warehouse
 	query := fmt.Sprintf("DESC TABLE %s.%s TYPE = COLUMNS", opts.Schema, opts.Table)
-	
+
 	result, err := d.c.Query(context.Background(), query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute columns query: %w", err)
