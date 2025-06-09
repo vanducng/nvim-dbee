@@ -235,6 +235,10 @@ config.default = {
       { key = "BB", mode = "v", action = "run_selection" },
       -- run the whole file on the active connection
       { key = "BB", mode = "n", action = "run_file" },
+      -- run the SQL statement under cursor (semicolon-delimited)
+      { key = "BS", mode = "n", action = "run_statement" },
+      -- visually select the SQL statement under cursor
+      { key = "SS", mode = "n", action = "select_statement" },
     },
   },
 

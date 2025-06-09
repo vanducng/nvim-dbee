@@ -156,6 +156,33 @@ function EditorUI:get_actions()
       local call = self.handler:connection_execute(conn.id, query)
       self.result:set_call(call)
     end,
+    run_statement = function()
+      if not self.winid or not vim.api.nvim_win_is_valid(self.winid) then
+        return
+      end
+
+      local bufnr = vim.api.nvim_win_get_buf(self.winid)
+      local cursor_pos = vim.api.nvim_win_get_cursor(self.winid)
+      local row = cursor_pos[1] - 1 -- 0-indexed
+
+      -- Get SQL statement at cursor
+      local query = utils.get_sql_statement_at_cursor(bufnr, row)
+
+      if not query or query == "" then
+        vim.notify("No SQL statement found at cursor", vim.log.levels.WARN)
+        return
+      end
+
+      local conn = self.handler:get_current_connection()
+      if not conn then
+        return
+      end
+      local call = self.handler:connection_execute(conn.id, query)
+      self.result:set_call(call)
+    end,
+    select_statement = function()
+      utils.select_sql_statement_at_cursor()
+    end,
   }
 end
 

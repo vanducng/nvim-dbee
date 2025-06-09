@@ -1,6 +1,7 @@
 local install = require("dbee.install")
 local api = require("dbee.api")
 local config = require("dbee.config")
+local utils = require("dbee.utils")
 
 ---@toc dbee.ref.contents
 
@@ -27,6 +28,9 @@ function dbee.setup(cfg)
   config.validate(merged)
 
   api.setup(merged)
+
+  -- Setup SQL text objects
+  utils.setup_sql_text_objects()
 end
 
 ---Toggle dbee UI.
