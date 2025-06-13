@@ -30,7 +30,10 @@ var (
 func newSnowflakeDriver(dsn string, params url.Values) (*snowflakeDriver, error) {
 	// Handle keypair authentication if specified
 	if params.Get("authenticator") == "snowflake_jwt" {
-		privateKeyPath := params.Get("privateKeyPath")
+		privateKeyPath := params.Get("privateKey")
+		if privateKeyPath == "" {
+			privateKeyPath = params.Get("privateKeyPath") // backward compatibility
+		}
 		privateKeyPass := params.Get("privateKeyPassphrase")
 
 		if privateKeyPath != "" {
@@ -46,7 +49,7 @@ func newSnowflakeDriver(dsn string, params url.Values) (*snowflakeDriver, error)
 			// Load private key
 			privateKey, err := loadPrivateKey(privateKeyPath, privateKeyPass)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load private key: %w", err)
+				return nil, fmt.Errorf("failed to load private key from %s: %w", privateKeyPath, err)
 			}
 
 			// Parse DSN to get config
@@ -139,21 +142,21 @@ func loadPrivateKey(path, passphrase string) (*rsa.PrivateKey, error) {
 			privateKey = parsedKey
 		}
 	} else {
-		// Parse unencrypted key
-		parsedKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		// Try PKCS8 format first (more common for Snowflake)
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			// Try PKCS8 format
-			key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			// Fall back to PKCS1 format
+			parsedKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse private key: %w", err)
 			}
+			privateKey = parsedKey
+		} else {
 			var ok bool
 			privateKey, ok = key.(*rsa.PrivateKey)
 			if !ok {
 				return nil, fmt.Errorf("private key is not RSA")
 			}
-		} else {
-			privateKey = parsedKey
 		}
 	}
 

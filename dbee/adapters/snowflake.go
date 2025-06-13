@@ -29,16 +29,22 @@ func (s *Snowflake) Connect(urlstr string) (core.Driver, error) {
 	authMethod := params.Get("authenticator")
 	dsn := ""
 	
+	// Create a copy of params to preserve original values
+	dsnParams := make(url.Values)
+	for k, v := range params {
+		dsnParams[k] = v
+	}
+	
 	switch authMethod {
 	case "snowflake_jwt":
 		// Keypair authentication
-		dsn = s.buildKeypairDSN(u, params)
+		dsn = s.buildKeypairDSN(u, dsnParams)
 	case "externalbrowser":
 		// MFA/SSO authentication
-		dsn = s.buildMFADSN(u, params)
+		dsn = s.buildMFADSN(u, dsnParams)
 	default:
 		// Default password authentication
-		dsn = s.buildPasswordDSN(u, params)
+		dsn = s.buildPasswordDSN(u, dsnParams)
 	}
 
 	driver, err := newSnowflakeDriver(dsn, params)
@@ -107,6 +113,11 @@ func (s *Snowflake) buildKeypairDSN(u *url.URL, params url.Values) string {
 	
 	// Ensure authenticator is set
 	params.Set("authenticator", "snowflake_jwt")
+	
+	// Remove privateKey from params as it's handled separately in the driver
+	params.Del("privateKey")
+	params.Del("privateKeyPath")
+	params.Del("privateKeyPassphrase")
 	
 	// Add query parameters
 	if strings.Contains(dsn, "?") {
