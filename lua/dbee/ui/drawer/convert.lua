@@ -138,9 +138,9 @@ local function handler_real_nodes(handler, result)
           type = "add",
           action_1 = function(cb)
             local prompt = {
-              { name = "name" },
-              { name = "type" },
-              { name = "url" },
+              { key = "name" },
+              { key = "type" },
+              { key = "url" },
             }
             common.float_prompt(prompt, {
               title = "Add Connection",
@@ -192,9 +192,9 @@ local function handler_real_nodes(handler, result)
             return
           end
           local prompt = {
-            { name = "name", default = original_details.name },
-            { name = "type", default = original_details.type },
-            { name = "url", default = original_details.url },
+            { key = "name", value = original_details.name },
+            { key = "type", value = original_details.type },
+            { key = "url", value = original_details.url },
           }
           common.float_prompt(prompt, {
             title = "Edit Connection",
@@ -335,7 +335,7 @@ function M.help_node(mappings)
   end
 
   table.sort(children, function(k1, k2)
-    return k1.id < k2.id
+    return k1.name < k2.name
   end)
 
   local node = NuiTree.Node({
@@ -360,7 +360,7 @@ local function modified_suffix(bufnr, refresh)
   end
 
   local suffix = ""
-  if vim.api.nvim_buf_get_option(bufnr, "modified") then
+  if vim.api.nvim_get_option_value("modified", { buf = bufnr }) then
     suffix = " ●"
   end
 

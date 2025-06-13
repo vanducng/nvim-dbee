@@ -27,7 +27,7 @@ dbee.toggle()                                                      *dbee.toggle*
 
 
 dbee.open()                                                          *dbee.open*
-    Open dbee UI.
+    Open dbee UI. If already opened, reset window layout.
 
 
 dbee.close()                                                        *dbee.close*
@@ -119,7 +119,7 @@ result_config                                                    *result_config*
     Configuration for result UI tile.
 
     Type: ~
-        {mappings:key_mapping[],page_size:integer,progress:progress_config,window_options:table<string,any>,buffer_options:table<string,any>}
+        {focus_result:boolean,mappings:key_mapping[],page_size:integer,progress:progress_config,window_options:table<string,any>,buffer_options:table<string,any>}
 
 
 editor_config                                                    *editor_config*
@@ -415,6 +415,7 @@ Layout                                                                  *Layout*
     Fields: ~
         {is_open}  (fun(self:Layout):boolean)  function that returns the state of ui.
         {open}     (fun(self:Layout))          function to open ui.
+        {reset}    (fun(self:Layout))          function to reset ui.
         {close}    (fun(self:Layout))          function to close ui.
 
 

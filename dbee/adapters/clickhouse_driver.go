@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/kndndrj/nvim-dbee/dbee/core"
@@ -35,22 +36,31 @@ func (c *clickhouseDriver) Columns(opts *core.TableOptions) ([]*core.Column, err
 
 func (c *clickhouseDriver) Structure() ([]*core.Structure, error) {
 	query := `
-        SELECT
-            table_schema, table_name, table_type
-            FROM information_schema.tables
-            WHERE lower(table_schema) != 'information_schema'
-        UNION ALL
-        SELECT DISTINCT
-            lower(table_schema), lower(table_name), table_type
-            FROM information_schema.tables
-            WHERE lower(table_schema) = 'information_schema'`
+		SELECT
+			database AS table_schema,
+			name AS table_name,
+			CASE
+				WHEN engine IN (
+					'MergeTree', 'ReplacingMergeTree', 'SummingMergeTree', 'AggregatingMergeTree',
+					'CollapsingMergeTree', 'VersionedCollapsingMergeTree', 'GraphiteMergeTree',
+					'TinyLog', 'Log', 'StripeLog', 'Memory', 'Buffer', 'Distributed'
+				) THEN 'BASE TABLE'
+				WHEN engine = 'View' THEN 'VIEW'
+				WHEN engine = 'MaterializedView' THEN 'VIEW'
+				WHEN engine = 'LiveView' THEN 'VIEW'
+				WHEN database IN ('system', 'information_schema') THEN 'SYSTEM TABLE'
+				ELSE 'UNKNOWN'
+			END AS table_type
+		FROM system.tables
+		ORDER BY database, name
+		`
 
 	rows, err := c.Query(context.TODO(), query)
 	if err != nil {
 		return nil, err
 	}
 
-	return getPGStructure(rows)
+	return core.GetGenericStructure(rows, getPGStructureType)
 }
 
 func (c *clickhouseDriver) Close() {
@@ -59,9 +69,11 @@ func (c *clickhouseDriver) Close() {
 
 func (c *clickhouseDriver) ListDatabases() (current string, available []string, err error) {
 	query := `
-		SELECT currentDatabase(), schema_name
-        FROM information_schema.schemata
-        WHERE schema_name NOT IN (currentDatabase(), 'INFORMATION_SCHEMA')
+		SELECT
+    		currentDatabase() AS current_db,
+    		name AS schema_name
+		FROM system.databases
+		WHERE name NOT IN (currentDatabase(), 'INFORMATION_SCHEMA')
 	`
 
 	rows, err := c.Query(context.TODO(), query)
@@ -84,8 +96,15 @@ func (c *clickhouseDriver) ListDatabases() (current string, available []string, 
 }
 
 func (c *clickhouseDriver) SelectDatabase(name string) error {
+	oldDB := c.opts.Auth.Database
 	c.opts.Auth.Database = name
-	c.c.Swap(clickhouse.OpenDB(c.opts))
 
+	db := clickhouse.OpenDB(c.opts)
+	if err := db.PingContext(context.Background()); err != nil {
+		c.opts.Auth.Database = oldDB
+		return fmt.Errorf("pinging connection failed with %v", err)
+	}
+
+	c.c.Swap(db)
 	return nil
 }

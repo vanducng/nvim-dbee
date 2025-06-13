@@ -9,6 +9,7 @@ local common = require("dbee.ui.common")
 ---@field private bufnr integer
 ---@field private current_call? CallDetails
 ---@field private page_size integer
+---@field private focus_result boolean
 ---@field private mappings key_mapping[]
 ---@field private page_index integer index of the current page
 ---@field private page_ammount integer number of pages in the current result set
@@ -34,6 +35,7 @@ function ResultUI:new(handler, opts)
     page_size = opts.page_size or 100,
     page_index = 0,
     page_ammount = 0,
+    focus_result = opts.focus_result,
     mappings = opts.mappings or {},
     stop_progress = function() end,
     progress_opts = opts.progress or {},
@@ -117,12 +119,22 @@ function ResultUI:has_window()
 end
 
 ---@private
+function ResultUI:focus_result_window()
+  if self.focus_result and self:has_window() then
+    return vim.api.nvim_set_current_win(self.winid)
+  end
+end
+
+---@private
+function ResultUI:set_default_result_window()
+  if self:has_window() then
+    vim.api.nvim_win_set_option(self.winid, "winbar", "Results")
+  end
+end
+
+---@private
 function ResultUI:display_progress()
   self.stop_progress = progress.display(self.bufnr, self.progress_opts)
-
-  if self:has_window() then
-    vim.api.nvim_set_current_win(self.winid)
-  end
 end
 
 ---@private
@@ -158,11 +170,8 @@ function ResultUI:display_status()
 
   vim.api.nvim_buf_set_option(self.bufnr, "modifiable", false)
 
-  -- set winbar and set focus
-  if self:has_window() then
-    vim.api.nvim_win_set_option(self.winid, "winbar", "Results")
-    vim.api.nvim_set_current_win(self.winid)
-  end
+  -- set winbar
+  self:set_default_result_window()
 
   -- reset modified flag
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
@@ -205,10 +214,9 @@ function ResultUI:display_result(page)
       "winbar",
       string.format("%d/%d (%d)%%=Took %.3fs", page + 1, self.page_ammount + 1, length, seconds)
     )
-
-    -- set focus if window exists
-    vim.api.nvim_set_current_win(self.winid)
   end
+  -- set focus if window exists
+  self:focus_result_window()
 
   -- reset modified flag
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
@@ -458,7 +466,7 @@ function ResultUI:show(winid)
   -- display the current result
   local ok = pcall(self.page_current, self)
   if not ok then
-    vim.api.nvim_win_set_option(self.winid, "winbar", "Results")
+    self:set_default_result_window()
   end
 end
 

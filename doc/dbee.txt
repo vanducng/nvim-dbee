@@ -35,6 +35,8 @@ Table of Contents                                     *dbee-table-of-contents*
 
 INSTALLATION                                   *dbee-neovim-dbee-installation*
 
+**requires nvim>=0.10**
+
 - packer.nvim:
     >lua
         use {
@@ -207,8 +209,24 @@ Here are the defaults:
           database_switch = {
             icon = "",
             icon_highlight = "Character",
+            text_highlight = "",
+          },
+          schema = {
+            icon = "",
+            icon_highlight = "Removed",
+            text_highlight = "",
           },
           table = {
+            icon = "",
+            icon_highlight = "Conditional",
+            text_highlight = "",
+          },
+          streaming_table = {
+            icon = "",
+            icon_highlight = "Conditional",
+            text_highlight = "",
+          },
+          managed = {
             icon = "",
             icon_highlight = "Conditional",
             text_highlight = "",
@@ -216,6 +234,16 @@ Here are the defaults:
           view = {
             icon = "",
             icon_highlight = "Debug",
+            text_highlight = "",
+          },
+          materialized_view = {
+            icon = "",
+            icon_highlight = "Type",
+            text_highlight = "",
+          },
+          sink = {
+            icon = "",
+            icon_highlight = "String",
             text_highlight = "",
           },
           column = {
@@ -253,21 +281,26 @@ Here are the defaults:
           -- use this for normal nodes...
           none = {
             icon = " ",
+            icon_highlight = "",
+            text_highlight = "",
           },
           -- ...and use this for nodes with children
           none_dir = {
             icon = "",
             icon_highlight = "NonText",
+            text_highlight = "",
           },
     
           -- chevron icons for expanded/closed nodes
           node_expanded = {
             icon = "",
             icon_highlight = "NonText",
+            text_highlight = "",
           },
           node_closed = {
             icon = "",
             icon_highlight = "NonText",
+            text_highlight = "",
           },
         },
       },
@@ -280,6 +313,9 @@ Here are the defaults:
     
         -- number of rows in the results set to display per page
         page_size = 100,
+    
+        -- whether to focus the result window after a query
+        focus_result = true,
     
         -- progress (loading) screen options
         progress = {
@@ -539,7 +575,7 @@ The above sources are just built-ins. Here is a short description of them:
           export DBEE_CONNECTIONS='[
               {
                   "name": "DB from env",
-                  "url": "mysql://...",
+                  "url": "username:password@tcp(host)/database-name",
                   "type": "mysql"
               }
           ]'

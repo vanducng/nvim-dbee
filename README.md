@@ -35,7 +35,18 @@
 
 <!-- DOCGEN_IGNORE_END -->
 
+<!-- DOCGEN_IGNORE_START -->
+
+### Video Introduction
+
+If you prefer to watch a video than to browse through docs, I made a video, which you can watch
+[here](https://youtu.be/MDlYsGbKJyQ)
+
+<!-- DOCGEN_IGNORE_END -->
+
 ## Installation
+
+**requires nvim>=0.10**
 
 - packer.nvim:
 
@@ -317,7 +328,7 @@ The above sources are just built-ins. Here is a short description of them:
     export DBEE_CONNECTIONS='[
         {
             "name": "DB from env",
-            "url": "mysql://...",
+            "url": "username:password@tcp(host)/database-name",
             "type": "mysql"
         }
     ]'
@@ -408,5 +419,14 @@ require("dbee").api.ui.some_func()
 ## Development
 
 Reffer to [ARCHITECTURE.md](ARCHITECTURE.md) for a brief overview of the architecture.
+
+## Contributing
+
+Contributions are more than welcome!
+
+Do so by creating an `issue` or a `PR`.
+
+You are also welcome to join the [#nvim-dbee:matrix.org](https://matrix.to/#/#nvim-dbee:matrix.org)
+chat for more direct communication.
 
 <!-- DOCGEN_IGNORE_END -->
