@@ -101,6 +101,11 @@ function DrawerUI:new(handler, editor, result, opts)
     o:on_current_connection_changed(data)
   end)
 
+  handler:register_event_listener("connection_state_changed", function(data)
+    -- Refresh drawer when connection state changes
+    o:refresh()
+  end)
+
   editor:register_event_listener("current_note_changed", function(data)
     o:on_current_note_changed(data)
   end)
