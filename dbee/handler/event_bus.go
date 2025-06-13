@@ -64,3 +64,14 @@ func (eb *eventBus) DatabaseSelected(id core.ConnectionID, dbname string) {
 
 	eb.callLua("database_selected", data)
 }
+
+// ConnectionStateChanged is called when a connection is connected or disconnected.
+// Sends the connection ID and new connected state to the lua event handler.
+func (eb *eventBus) ConnectionStateChanged(id core.ConnectionID, connected bool) {
+	data := fmt.Sprintf(`{
+		conn_id = %q,
+		connected = %t,
+	}`, id, connected)
+
+	eb.callLua("connection_state_changed", data)
+}

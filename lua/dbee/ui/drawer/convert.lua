@@ -229,23 +229,60 @@ local function handler_real_nodes(handler, result)
         end
       end
 
+      -- Create a dynamic node that checks connection status each time
       local node = NuiTree.Node {
         id = conn.id,
-        name = conn.name,
+        name = conn.name, -- Base name, will be updated dynamically
         type = "connection",
-        -- set connection as active manually
+        -- set connection as active manually (connect if needed)
         action_1 = function(cb)
-          handler:set_current_connection(conn.id)
+          local is_connected = handler:connection_is_connected(conn.id)
+          if is_connected then
+            handler:set_current_connection(conn.id)
+          else
+            -- Auto-connect when user tries to set as current
+            local ok = pcall(handler.connection_connect, handler, conn.id)
+            if ok then
+              handler:set_current_connection(conn.id)
+            else
+              utils.log("error", "Failed to connect to database", "drawer")
+            end
+          end
           cb()
         end,
         -- edit connection
         action_2 = edit_action,
         -- remove connection
         action_3 = delete_action,
+        -- connect/disconnect toggle
+        action_4 = function(cb)
+          local is_connected = handler:connection_is_connected(conn.id)
+          if is_connected then
+            pcall(handler.connection_disconnect, handler, conn.id)
+          else
+            pcall(handler.connection_connect, handler, conn.id)
+          end
+          cb()
+        end,
         lazy_children = function()
-          return connection_nodes(handler, conn, result)
+          local is_connected = handler:connection_is_connected(conn.id)
+          if is_connected then
+            return connection_nodes(handler, conn, result)
+          else
+            return {}
+          end
         end,
       } --[[@as DrawerUINode]]
+
+      -- Update node name with dynamic status
+      local function update_node_name()
+        local is_connected = handler:connection_is_connected(conn.id)
+        local status_icon = is_connected and "🟢" or "🔴"
+        node.text = status_icon .. " " .. conn.name
+      end
+      
+      -- Set initial name
+      update_node_name()
 
       table.insert(children, node)
     end

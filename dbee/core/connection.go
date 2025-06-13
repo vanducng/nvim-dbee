@@ -49,8 +49,9 @@ type Connection struct {
 	params           *ConnectionParams
 	unexpandedParams *ConnectionParams
 
-	driver  Driver
-	adapter Adapter
+	driver    Driver
+	adapter   Adapter
+	connected bool
 }
 
 func (s *Connection) MarshalJSON() ([]byte, error) {
@@ -64,17 +65,13 @@ func NewConnection(params *ConnectionParams, adapter Adapter) (*Connection, erro
 		expanded.ID = ConnectionID(uuid.New().String())
 	}
 
-	driver, err := adapter.Connect(expanded.URL)
-	if err != nil {
-		return nil, fmt.Errorf("adapter.Connect: %w", err)
-	}
-
 	c := &Connection{
 		params:           expanded,
 		unexpandedParams: params,
 
-		driver:  driver,
-		adapter: adapter,
+		driver:    nil,
+		adapter:   adapter,
+		connected: false,
 	}
 
 	return c, nil
@@ -101,10 +98,48 @@ func (c *Connection) GetParams() *ConnectionParams {
 	return c.unexpandedParams
 }
 
+// Connect establishes a connection to the database
+func (c *Connection) Connect() error {
+	if c.connected {
+		return nil // already connected
+	}
+
+	driver, err := c.adapter.Connect(c.params.URL)
+	if err != nil {
+		return fmt.Errorf("adapter.Connect: %w", err)
+	}
+
+	c.driver = driver
+	c.connected = true
+	return nil
+}
+
+// Disconnect closes the database connection
+func (c *Connection) Disconnect() error {
+	if !c.connected {
+		return nil // already disconnected
+	}
+
+	if c.driver != nil {
+		c.driver.Close()
+		c.driver = nil
+	}
+	c.connected = false
+	return nil
+}
+
+// IsConnected returns true if the connection is active
+func (c *Connection) IsConnected() bool {
+	return c.connected
+}
+
 func (c *Connection) Execute(query string, onEvent func(CallState, *Call)) *Call {
 	exec := func(ctx context.Context) (ResultStream, error) {
 		if strings.TrimSpace(query) == "" {
 			return nil, errors.New("empty query")
+		}
+		if !c.connected || c.driver == nil {
+			return nil, errors.New("connection not established")
 		}
 		return c.driver.Query(ctx, query)
 	}
@@ -115,6 +150,10 @@ func (c *Connection) Execute(query string, onEvent func(CallState, *Call)) *Call
 // SelectDatabase tries to switch to a given database with the used client.
 // on error, the switch doesn't happen and the previous connection remains active.
 func (c *Connection) SelectDatabase(name string) error {
+	if !c.connected || c.driver == nil {
+		return errors.New("connection not established")
+	}
+
 	switcher, ok := c.driver.(DatabaseSwitcher)
 	if !ok {
 		return ErrDatabaseSwitchingNotSupported
@@ -129,6 +168,10 @@ func (c *Connection) SelectDatabase(name string) error {
 }
 
 func (c *Connection) ListDatabases() (current string, available []string, err error) {
+	if !c.connected || c.driver == nil {
+		return "", nil, errors.New("connection not established")
+	}
+
 	switcher, ok := c.driver.(DatabaseSwitcher)
 	if !ok {
 		return "", nil, ErrDatabaseSwitchingNotSupported
@@ -147,6 +190,10 @@ func (c *Connection) GetColumns(opts *TableOptions) ([]*Column, error) {
 		return nil, fmt.Errorf("opts cannot be nil")
 	}
 
+	if !c.connected || c.driver == nil {
+		return nil, errors.New("connection not established")
+	}
+
 	cols, err := c.driver.Columns(opts)
 	if err != nil {
 		return nil, fmt.Errorf("c.driver.Columns: %w", err)
@@ -159,6 +206,10 @@ func (c *Connection) GetColumns(opts *TableOptions) ([]*Column, error) {
 }
 
 func (c *Connection) GetStructure() ([]*Structure, error) {
+	if !c.connected || c.driver == nil {
+		return nil, errors.New("connection not established")
+	}
+
 	// structure
 	structure, err := c.driver.Structure()
 	if err != nil {
@@ -191,5 +242,9 @@ func (c *Connection) GetHelpers(opts *TableOptions) map[string]string {
 }
 
 func (c *Connection) Close() {
-	c.driver.Close()
+	if c.driver != nil {
+		c.driver.Close()
+		c.driver = nil
+	}
+	c.connected = false
 }

@@ -90,7 +90,6 @@ func (h *Handler) CreateConnection(params *core.ConnectionParams) (core.Connecti
 	}
 
 	h.lookupConnection[c.GetID()] = c
-	_ = h.SetCurrentConnection(c.GetID())
 
 	return c.GetID(), nil
 }
@@ -103,6 +102,45 @@ func (h *Handler) DeleteConnection(id core.ConnectionID) error {
 	c.Close()
 	delete(h.lookupConnection, id)
 	return nil
+}
+
+func (h *Handler) ConnectionConnect(id core.ConnectionID) error {
+	c, ok := h.lookupConnection[id]
+	if !ok {
+		return fmt.Errorf("connection with id does not exist. id: %s", id)
+	}
+
+	err := c.Connect()
+	if err != nil {
+		return fmt.Errorf("c.Connect: %w", err)
+	}
+
+	h.events.ConnectionStateChanged(id, true)
+	return nil
+}
+
+func (h *Handler) ConnectionDisconnect(id core.ConnectionID) error {
+	c, ok := h.lookupConnection[id]
+	if !ok {
+		return fmt.Errorf("connection with id does not exist. id: %s", id)
+	}
+
+	err := c.Disconnect()
+	if err != nil {
+		return fmt.Errorf("c.Disconnect: %w", err)
+	}
+
+	h.events.ConnectionStateChanged(id, false)
+	return nil
+}
+
+func (h *Handler) ConnectionIsConnected(id core.ConnectionID) (bool, error) {
+	c, ok := h.lookupConnection[id]
+	if !ok {
+		return false, fmt.Errorf("connection with id does not exist. id: %s", id)
+	}
+
+	return c.IsConnected(), nil
 }
 
 func (h *Handler) GetConnections(ids []core.ConnectionID) []*core.Connection {
@@ -140,9 +178,13 @@ func (h *Handler) GetCurrentConnection() (*core.Connection, error) {
 }
 
 func (h *Handler) SetCurrentConnection(connID core.ConnectionID) error {
-	_, ok := h.lookupConnection[connID]
+	c, ok := h.lookupConnection[connID]
 	if !ok {
 		return fmt.Errorf("unknown connection with id: %q", connID)
+	}
+
+	if !c.IsConnected() {
+		return fmt.Errorf("connection must be connected before setting as current")
 	}
 
 	if h.currentConnectionID == connID {

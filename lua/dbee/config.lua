@@ -86,6 +86,8 @@ config.default = {
       { key = "cw", mode = "n", action = "action_2" },
       -- action_3 deletes a note or connection (removes connection from the file if you configured it like so)
       { key = "dd", mode = "n", action = "action_3" },
+      -- action_4 connects/disconnects a connection
+      { key = "<space>", mode = "n", action = "action_4" },
       -- these are self-explanatory:
       -- { key = "c", mode = "n", action = "collapse" },
       -- { key = "e", mode = "n", action = "expand" },
@@ -113,6 +115,16 @@ config.default = {
       connection = {
         icon = "󱘖",
         icon_highlight = "SpecialChar",
+        text_highlight = "",
+      },
+      connection_connected = {
+        icon = "🟢",
+        icon_highlight = "String",
+        text_highlight = "",
+      },
+      connection_disconnected = {
+        icon = "🔴",
+        icon_highlight = "Error",
         text_highlight = "",
       },
       database_switch = {

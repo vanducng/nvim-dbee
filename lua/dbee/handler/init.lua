@@ -211,6 +211,26 @@ function Handler:set_current_connection(id)
 end
 
 ---@param id connection_id
+function Handler:connection_connect(id)
+  vim.fn.DbeeConnectionConnect(id)
+end
+
+---@param id connection_id
+function Handler:connection_disconnect(id)
+  vim.fn.DbeeConnectionDisconnect(id)
+end
+
+---@param id connection_id
+---@return boolean
+function Handler:connection_is_connected(id)
+  local ok, ret = pcall(vim.fn.DbeeConnectionIsConnected, id)
+  if not ok then
+    return false
+  end
+  return ret
+end
+
+---@param id connection_id
 ---@param query string
 ---@return CallDetails
 function Handler:connection_execute(id, query)

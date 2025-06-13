@@ -38,6 +38,33 @@ func mountEndpoints(p *plugin.Plugin, h *handler.Handler) {
 		})
 
 	p.RegisterEndpoint(
+		"DbeeConnectionConnect",
+		func(args *struct {
+			ID string `msgpack:",array"`
+		},
+		) error {
+			return h.ConnectionConnect(core.ConnectionID(args.ID))
+		})
+
+	p.RegisterEndpoint(
+		"DbeeConnectionDisconnect",
+		func(args *struct {
+			ID string `msgpack:",array"`
+		},
+		) error {
+			return h.ConnectionDisconnect(core.ConnectionID(args.ID))
+		})
+
+	p.RegisterEndpoint(
+		"DbeeConnectionIsConnected",
+		func(args *struct {
+			ID string `msgpack:",array"`
+		},
+		) (bool, error) {
+			return h.ConnectionIsConnected(core.ConnectionID(args.ID))
+		})
+
+	p.RegisterEndpoint(
 		"DbeeGetConnections",
 		func(args *struct {
 			IDs []core.ConnectionID `msgpack:",array"`
