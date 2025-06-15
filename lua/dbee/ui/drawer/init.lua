@@ -273,6 +273,13 @@ function DrawerUI:get_actions()
       end
       perform_action(node.action_3)
     end,
+    action_4 = function()
+      local node = self.tree:get_node() --[[@as DrawerUINode]]
+      if not node then
+        return
+      end
+      perform_action(node.action_4)
+    end,
     collapse = function()
       local node = self.tree:get_node()
       if not node then
