@@ -87,7 +87,7 @@ config.default = {
       -- action_3 deletes a note or connection (removes connection from the file if you configured it like so)
       { key = "dd", mode = "n", action = "action_3" },
       -- action_4 connects/disconnects a connection
-      { key = "<space>", mode = "n", action = "action_4" },
+      { key = "x", mode = "n", action = "action_4" },
       -- these are self-explanatory:
       -- { key = "c", mode = "n", action = "collapse" },
       -- { key = "e", mode = "n", action = "expand" },
