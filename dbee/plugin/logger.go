@@ -19,7 +19,7 @@ type Logger struct {
 func NewLogger(vim *nvim.Nvim) *Logger {
 	return &Logger{
 		vim:          vim,
-		logger:       log.New(os.Stdout, "", log.Ldate|log.Ltime),
+		logger:       log.New(os.Stderr, "", log.Ldate|log.Ltime), // Use stderr instead of stdout
 		triedFileSet: false,
 	}
 }

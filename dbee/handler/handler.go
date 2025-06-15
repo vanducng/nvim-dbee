@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/neovim/go-client/nvim"
@@ -206,7 +207,12 @@ func (h *Handler) ConnectionExecute(connID core.ConnectionID, query string) (*co
 
 	call := c.Execute(query, func(state core.CallState, c *core.Call) {
 		if err := c.Err(); err != nil {
-			h.log.Errorf("cl.Err: %s", err)
+			// Only log internal errors, not user-facing SQL errors
+			// Snowflake errors (like missing tables) should not be logged as system errors
+			errStr := err.Error()
+			if !containsUserFacingError(errStr) {
+				h.log.Errorf("cl.Err: %s", err)
+			}
 		}
 
 		h.events.CallStateChanged(c)
@@ -437,4 +443,26 @@ func (h *Handler) getStoreWriter(output string, arg ...any) (writer io.Writer, c
 	}
 
 	return nil, func() {}, fmt.Errorf("store output: %q is not supported", output)
+}
+
+// containsUserFacingError checks if an error is a user-facing SQL error (like missing table)
+// rather than a system error that should be logged
+func containsUserFacingError(errStr string) bool {
+	userFacingErrors := []string{
+		"SQL compilation error",
+		"does not exist or not authorized",
+		"Object",
+		"syntax error",
+		"Access denied",
+		"Query failed:",
+		"Failed to get",
+	}
+	
+	errLower := strings.ToLower(errStr)
+	for _, userErr := range userFacingErrors {
+		if strings.Contains(errLower, strings.ToLower(userErr)) {
+			return true
+		}
+	}
+	return false
 }

@@ -173,6 +173,10 @@ func (d *snowflakeDriver) Structure() ([]*core.Structure, error) {
 
 	result, err := d.c.Query(context.Background(), query)
 	if err != nil {
+		// Handle Snowflake errors cleanly
+		if snowflakeError, ok := err.(*gosnowflake.SnowflakeError); ok {
+			return nil, fmt.Errorf("Failed to get database structure: %s", snowflakeError.Message)
+		}
 		return nil, fmt.Errorf("failed to execute structure query: %w", err)
 	}
 	defer result.Close()
@@ -221,6 +225,10 @@ func (d *snowflakeDriver) Columns(opts *core.TableOptions) ([]*core.Column, erro
 
 	result, err := d.c.Query(context.Background(), query)
 	if err != nil {
+		// Handle Snowflake errors cleanly
+		if snowflakeError, ok := err.(*gosnowflake.SnowflakeError); ok {
+			return nil, fmt.Errorf("Failed to get table columns: %s", snowflakeError.Message)
+		}
 		return nil, fmt.Errorf("failed to execute columns query: %w", err)
 	}
 	defer result.Close()
